@@ -10,6 +10,13 @@ from TimeParameters import TimeParameters
 from SpatialParameters import SpatialParameters
 #from scipy.io import savemat
 import json
+import numpy as np
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 class Acoustics:
     
@@ -46,7 +53,8 @@ class Acoustics:
         self.time_params = TimeParameters(self.signal, self.fs, bands_fraction=3, channels=self.channels)
         if((self.channels == 2) and (self.weighting == 'A')):
             self.space_params = SpatialParameters(self.signal, self.fs, window_size = 2, running_step=0.1)  
-        self.save_parameters()
+
+        return self.save_parameters()
         
     def save_parameters(self):
         if((self.channels == 2) and (self.weighting == 'A')):
@@ -78,7 +86,10 @@ class Acoustics:
                 }
             
         #savemat(self.datetime+" "+self.weighting+".mat", results)
+        json_dump = json.dumps(results, cls=NumpyEncoder)
 
-        with open(self.datetime+" "+self.weighting+".mat", 'w', encoding='utf-8') as f:
-            json.dump(results, f, ensure_ascii=False, indent=4)
+        return json.loads(json_dump)
+
+        #with open(self.datetime+" "+self.weighting+".json", 'w', encoding='utf-8') as f:
+        #    json.dump(json.loads(json_dump), f, ensure_ascii=False, indent=4)
 

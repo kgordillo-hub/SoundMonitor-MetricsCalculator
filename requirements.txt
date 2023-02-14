@@ -1,0 +1,7 @@
+Flask
+numpy
+pandas
+scipy
+soundfile
+boto3
+acoustics
