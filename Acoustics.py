@@ -31,7 +31,7 @@ class Acoustics:
         self.cal_factor = cal_factor
     
     def get_date_time(self):
-        data = self.filename.split(" ")
+        data = self.filename.split("_")
         date = data[1].split("-")
         self.year = date[0]
         self.month = date[1]

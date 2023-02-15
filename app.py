@@ -48,7 +48,7 @@ def identify_sound():
     start_time = time.time()
     logging.debug('Calculador de métricas iniciado...')
     
-    #response = None
+    response = None
     
     if request.json is None:
         # Expect application/json request
@@ -77,7 +77,7 @@ def identify_sound():
             logging.warn("Inicializa el calculador de metricas")
             
             result = calcular_metricas(str(archivo))
-            logging.warn(result)
+            #logging.warn(result)
             logging.warn("Finaliza el calculador de metricas")
 
             processing_time = (time.time() - start_time)
@@ -91,8 +91,8 @@ def identify_sound():
                 'Inferencer_result': result
             }
             
-            logging.warn("Service response to save in S3....")
-            logging.warn(service_response)
+
+            #logging.warn(service_response)
 
             s3.put_object(
                 Body=(bytes(json.dumps(service_response).encode('UTF-8'))),
@@ -100,7 +100,8 @@ def identify_sound():
                 Key='NoiseLevel_'+str(archivo)+'_'+str(time.time())+'_.json'
             )
 
-            response = Response("", status=200)
+            response = Response("Metrics calculation completed", status=200)
+            logging.warn("Response saved in S3....")
         except Exception as ex:
             sns_client = boto3.client("sns", region_name='us-east-1')
             response = sns_client.publish(
@@ -124,36 +125,43 @@ def calcular_metricas(file_name):
         print("Applying correction filter")
         data = apply_correction_filter(data, bands, gains, sample_rate)
 
-        #print("Measuring A...")
-        #measurement_A = Acoustics(filename=fileName, signal=data, fs=sample_rate, channels=num_channels, cal_factor=calibration, weighting='A')
-
-        print("Measuring Z...")
-        measurement_Z = Acoustics(filename=file_name,
+        print("Measuring A...")
+        measurement_A = Acoustics(filename=file_name,
                                   signal=data,
                                   fs=sample_rate,
                                   channels=num_channels,
                                   cal_factor=calibration,
-                                  weighting='Z'
+                                  weighting='A'
                                   )
 
-        return measurement_Z.compute_parameters()
+        #print("Measuring Z...")
+        #measurement_Z = Acoustics(filename=file_name,
+        #                          signal=data,
+        #                          fs=sample_rate,
+        #                          channels=num_channels,
+        #                          cal_factor=calibration,
+        #                          weighting='Z'
+        #                          )
 
-        #return measurement_A.compute_parameters()
+        #return measurement_Z.compute_parameters()
 
-    except RuntimeError:
-        print("--- Couldn't open "+file_name+"! ---")
+        return measurement_A.compute_parameters()
+
+    except RuntimeError as re:
+        logging.exception("--- Couldn't open : %s" % file_name)
+        logging.exception(re)
         raise
 
 
 def get_file_date(file_name):
-    date_split = file_name.split(" ")
+    date_split = file_name.split("_")
     if len(date_split) > 1:
         return date_split[1] + ""
     else:
         return ""
 
 def get_file_hour(file_name):
-    date_split = file_name.split(" ")
+    date_split = file_name.split("_")
     if len(date_split) > 2:
         return date_split[2] + ""
     else:
