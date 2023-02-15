@@ -88,7 +88,7 @@ def identify_sound():
                 'ProcessingTime_seconds': processing_time,
                 'Audio_fecha': file_date,
                 'Audio_hora': file_hour,
-                'Inferencer_result': result
+                'Metrics_result': result
             }
             
 
@@ -106,7 +106,8 @@ def identify_sound():
             sns_client = boto3.client("sns", region_name='us-east-1')
             response = sns_client.publish(
                TopicArn="arn:aws:sns:us-east-1:703106094997:audio_error_topic",
-               Message=json.dumps({'statusCode': 500, 'error_processing': request.json})
+               Message=json.dumps({'statusCode': 500, 'error_processing': request.json,
+                                   'exception': str(ex.args[0])})
             )
             logging.exception("Error processing message: %s" % request.json)
             logging.exception(ex)
@@ -174,4 +175,4 @@ def print_hello():
 
 
 if __name__ == "__main__":
-    application.run(host="0.0.0.0")
+    application.run(host="0.0.0.0", threaded=False)
