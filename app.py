@@ -55,7 +55,6 @@ def identify_sound():
         response = Response("Empty request", status=415)
     else:
         request_content = json.loads(request.data)
-        #message = dict()
         try:
             content_json = json.loads(request_content["Message"])
 
@@ -97,17 +96,17 @@ def identify_sound():
             s3.put_object(
                 Body=(bytes(json.dumps(service_response).encode('UTF-8'))),
                 Bucket='soundmonitor-noise-level',
-                Key='NoiseLevel_'+str(archivo)+'_'+str(time.time())+'_.json'
+                Key='NoiseLevel_'+str(archivo)+'_.json'
             )
 
             response = Response("Metrics calculation completed", status=200)
             logging.warn("Response saved in S3....")
         except Exception as ex:
-            sns_client = boto3.client("sns", region_name='us-east-1')
-            response = sns_client.publish(
-               TopicArn="arn:aws:sns:us-east-1:703106094997:audio_error_topic",
-               Message=json.dumps({'statusCode': 500, 'error_processing': request.json,
-                                   'exception': str(ex.args[0])})
+            response = s3.put_object(
+                Body=(bytes(json.dumps({'statusCode': 500, 'error_processing': request.json,
+                                        'exception': str(ex)}).encode('UTF-8'))),
+                Bucket='soundmonitor-error-logs',
+                Key='NoiseLevel_' + str(archivo) + '_error.json'
             )
             logging.exception("Error processing message: %s" % request.json)
             logging.exception(ex)
@@ -135,17 +134,6 @@ def calcular_metricas(file_name):
                                   weighting='A'
                                   )
 
-        #print("Measuring Z...")
-        #measurement_Z = Acoustics(filename=file_name,
-        #                          signal=data,
-        #                          fs=sample_rate,
-        #                          channels=num_channels,
-        #                          cal_factor=calibration,
-        #                          weighting='Z'
-        #                          )
-
-        #return measurement_Z.compute_parameters()
-
         return measurement_A.compute_parameters()
 
     except RuntimeError as re:
@@ -161,12 +149,14 @@ def get_file_date(file_name):
     else:
         return ""
 
+
 def get_file_hour(file_name):
     date_split = file_name.split("_")
     if len(date_split) > 2:
         return date_split[2] + ""
     else:
         return ""
+
 
 @application.route("/")
 def print_hello():
