@@ -12,6 +12,7 @@ import time
 import flask
 import math
 import numpy as np
+import os
 
 from flask import Response, request
 from soundfile import SoundFile
@@ -76,7 +77,7 @@ def identify_sound():
             logging.warn("Inicializa el calculador de metricas")
             
             result = calcular_metricas(str(archivo))
-            #logging.warn(result)
+
             logging.warn("Finaliza el calculador de metricas")
 
             processing_time = (time.time() - start_time)
@@ -89,10 +90,12 @@ def identify_sound():
                 'Audio_hora': file_hour,
                 'Metrics_result': result
             }
-            
-
-            #logging.warn(service_response)
-
+            logging.warn("Files in tmp before:")
+            list_directory(path)
+            #Removing file
+            os.remove(out_file_path)
+            logging.warn("Files in tmp after:")
+            list_directory(path)
             s3.put_object(
                 Body=(bytes(json.dumps(service_response).encode('UTF-8'))),
                 Bucket='soundmonitor-noise-level',
@@ -140,6 +143,13 @@ def calcular_metricas(file_name):
         logging.exception("--- Couldn't open : %s" % file_name)
         logging.exception(re)
         raise
+
+
+def list_directory(dir_path):
+    for file in os.listdir(dir_path):
+        # check only text files
+        if file.endswith('.wav'):
+            logging.warn(file)
 
 
 def get_file_date(file_name):
